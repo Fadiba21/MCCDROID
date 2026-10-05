@@ -133,7 +133,14 @@ jobs:
         run: |
           set -o pipefail
           mkdir -p build
-          gradle :app:assembleRelease --no-daemon --stacktrace 2>&1 | tee build/gradle.log
+          gradle :app:assembleRelease --no-daemon --stacktrace 2>&1 | tee build/gradle.log || {
+            echo "---- ERROR KOMPILASI ----"
+            grep -E "^e: |error:|FAILED|What went wrong" -A3 build/gradle.log | head -60 > build/errors.txt || true
+            cat build/errors.txt
+            while IFS= read -r l; do echo "::error::${l:0:300}"; done < <(grep -E "^e: " build/gradle.log | head -15)
+            { echo '### Error build'; echo '```'; cat build/errors.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          }
 
       - name: Ganti nama APK
         run: |

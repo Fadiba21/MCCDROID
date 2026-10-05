@@ -15,13 +15,48 @@ CSPROJ="$SRC/MinecraftClient/MinecraftClient.csproj"
 echo "== Isi awal csproj (bagian Project/Framework):"
 grep -nE "<Project|FrameworkReference|AspNetCore|TargetFramework" "$CSPROJ" || true
 
-# Tidak ada runtime pack ASP.NET Core untuk linux-bionic: lepas semua referensinya.
+# Paket ModelContextProtocol.AspNetCore butuh runtime ASP.NET Core yang tidak ada untuk linux-bionic.
+# Lepas paketnya dan ganti host MCP bawaan dengan stub (bot MCP Server nonaktif di Android).
 sed -i 's#Sdk="Microsoft.NET.Sdk.Web"#Sdk="Microsoft.NET.Sdk"#' "$CSPROJ"
-sed -i '/Microsoft\.AspNetCore\.App/d' "$CSPROJ"
+sed -i '/Microsoft\.AspNetCore\.App/d; /ModelContextProtocol\.AspNetCore/d' "$CSPROJ"
+HOST="$SRC/MinecraftClient/Mcp/MccEmbeddedMcpHost.cs"
+if [ -f "$HOST" ]; then
+  echo "== Mengganti MccEmbeddedMcpHost.cs dengan stub"
+  cat > "$HOST" <<'CS'
+using System;
+
+namespace MinecraftClient.Mcp;
+
+// Stub untuk Android: server MCP (ASP.NET Core) tidak didukung di linux-bionic.
+public sealed class MccEmbeddedMcpHost
+{
+    private readonly MccMcpConfig config;
+
+    public MccEmbeddedMcpHost(MccMcpConfig config, IMccMcpCapabilities capabilities)
+    {
+        this.config = config;
+    }
+
+    public bool IsRunning => false;
+
+    public string Endpoint => $"http://{config.Transport.BindHost}:{config.Transport.Port}{config.Transport.Route}";
+
+    public bool Start(out string? error)
+    {
+        error = "tidak didukung di Android";
+        return false;
+    }
+
+    public bool Stop(out string? error)
+    {
+        error = null;
+        return true;
+    }
+}
+CS
+fi
 echo "== Setelah patch:"
 grep -nE "<Project|FrameworkReference|AspNetCore" "$CSPROJ" || true
-echo "== Pemakaian namespace AspNetCore di kode (info):"
-grep -rln "Microsoft.AspNetCore" "$SRC/MinecraftClient" --include=*.cs | head -20 || true
 
 dotnet publish "$SRC/MinecraftClient/MinecraftClient.csproj" \
   -c Release \

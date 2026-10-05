@@ -22,8 +22,8 @@ cp -a "$SSL"/. "$B"/
 # Alias nama yang dicari .NET (libssl.so.3 / libssl.so). File asli tetap ada karena DT_NEEDED
 # libssl menunjuk ke SONAME libcrypto aslinya.
 shopt -s nullglob
-ssl_real=$(ls "$SSL"/libssl* | head -n1)
-cry_real=$(ls "$SSL"/libcrypto* | head -n1)
+ssl_real=$(ls "$SSL"/libssl* | sed -n 1p)
+cry_real=$(ls "$SSL"/libcrypto* | sed -n 1p)
 for n in libssl.so.3 libssl.so; do cp "$ssl_real" "$B/$n"; done
 for n in libcrypto.so.3 libcrypto.so; do cp "$cry_real" "$B/$n"; done
 

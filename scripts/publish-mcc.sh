@@ -73,5 +73,5 @@ dotnet publish "$SRC/MinecraftClient/MinecraftClient.csproj" \
   -o "$OUT"
 
 echo "== Hasil publish:"
-ls "$OUT" | head -80
+ls "$OUT" | wc -l
 test -f "$OUT/MinecraftClient" || { echo "::error::apphost MinecraftClient tidak terbentuk"; exit 1; }

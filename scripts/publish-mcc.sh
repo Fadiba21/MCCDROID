@@ -12,13 +12,17 @@ rm -rf "$OUT"
 echo "== dotnet $(dotnet --version)"
 
 CSPROJ="$SRC/MinecraftClient/MinecraftClient.csproj"
-# Tidak ada runtime pack ASP.NET Core untuk linux-bionic; lepas referensinya bila ada.
-if grep -q "Microsoft.AspNetCore.App" "$CSPROJ"; then
-  echo "== Melepas FrameworkReference Microsoft.AspNetCore.App dari csproj"
-  sed -i '/Microsoft\.AspNetCore\.App/d' "$CSPROJ"
-  echo "== Pemakaian namespace AspNetCore di kode (info):"
-  grep -rl "Microsoft.AspNetCore" "$SRC/MinecraftClient" --include=*.cs | head -20 || true
-fi
+echo "== Isi awal csproj (bagian Project/Framework):"
+grep -nE "<Project|FrameworkReference|AspNetCore|TargetFramework" "$CSPROJ" || true
+
+# Tidak ada runtime pack ASP.NET Core untuk linux-bionic: lepas semua referensinya.
+sed -i 's#Sdk="Microsoft.NET.Sdk.Web"#Sdk="Microsoft.NET.Sdk"#' "$CSPROJ"
+sed -i '/Microsoft\.AspNetCore\.App/d' "$CSPROJ"
+echo "== Setelah patch:"
+grep -nE "<Project|FrameworkReference|AspNetCore" "$CSPROJ" || true
+echo "== Pemakaian namespace AspNetCore di kode (info):"
+grep -rln "Microsoft.AspNetCore" "$SRC/MinecraftClient" --include=*.cs | head -20 || true
+
 dotnet publish "$SRC/MinecraftClient/MinecraftClient.csproj" \
   -c Release \
   -r linux-bionic-arm64 \
